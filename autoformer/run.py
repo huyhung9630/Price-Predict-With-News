@@ -19,24 +19,23 @@ def output_results_and_errors(predicted, true, scaler, file_name):
     pred_flat = predicted.reshape(-1, predicted.shape[-1])
     true_flat = true.reshape(-1, true.shape[-1])
 
-    # 2) Inverse-transform về thang gốc
+    # 2) Dua ve thang goc
     pred_orig = scaler.inverse_transform(pred_flat)
     true_orig = scaler.inverse_transform(true_flat)
 
-    # 3) Lấy feature đầu tiên để đánh giá (nếu multi-feature thì lặp tương tự)
     y_pred = pred_orig[:, 0]
     y_true = true_orig[:, 0]
 
-    # 4) Tính metrics
+    # 3) Metrics
     mae = mean_absolute_error(y_true, y_pred)
     mse = mean_squared_error(y_true, y_pred)
     r2  = r2_score(y_true, y_pred)
 
-    # 5) Chuẩn bị thư mục lưu
+    # 4) Luu
     output_dir = "test_results"
     os.makedirs(output_dir, exist_ok=True)
 
-    # 6) Lưu file dự đoán vs thực
+    # 5) Luu file pred vs true
     df = pd.DataFrame({
         "Predicted": y_pred,
         "True":      y_true
@@ -44,7 +43,7 @@ def output_results_and_errors(predicted, true, scaler, file_name):
     pred_path = os.path.join(output_dir, f"{file_name}_predict.csv")
     df.to_csv(pred_path, index=False)
 
-    # 7) Lưu file metrics
+    # 6) Luu file metrics
     metrics_df = pd.DataFrame([{"MAE": mae, "MSE": mse, "R2": r2}])
     eval_path = os.path.join(output_dir, f"{file_name}_eval.csv")
     metrics_df.to_csv(eval_path, index=False)
@@ -113,4 +112,4 @@ def main(config_path, csv_path, model_save_path="saved_models/autoformer.pth", p
     output_results_and_errors(preds, test_data[4], data.scaler, os.path.splitext(os.path.basename(csv_path))[0])
 
 if __name__ == "__main__":
-    main("sentiment_config.json", "data/DIS.csv")  # ví dụ file, đổi path nếu cần
+    main("sentiment_config.json", "data/DIS.csv")

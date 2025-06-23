@@ -60,32 +60,25 @@ def read_csv_case_insensitive(file_path):
 
 
 def data_processor(data):
-  # Checking if GPU is available
   device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-  # print('device = ',device)
 
-  # Scaling the data
   scaler = MinMaxScaler()
   scaled_data = scaler.fit_transform(data)
 
-  # Creating sequences
   input_length = 50
   output_length = 3
 
-  # Split training data into training and validation sets
   split_ratio = 0.85
   split = int(split_ratio * len(scaled_data))
   data_train = scaled_data[:split]
   data_test = scaled_data[split:]
 
-  # Splitting the dataset into training and testing sets (80-20 split)
   X_train, y_train = create_sequences(data_train, input_length, output_length)
   X_test, y_test = create_sequences(data_test, input_length, output_length)
 
-  # Displaying the shapes of the datasets to ensure correctness
   print('X_train: ',X_train.shape, 'X_test', X_test.shape, 'y_train', y_train.shape, 'y_test',y_test.shape)
 
-  X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(device)  # Transposing to match model's input shape
+  X_train_tensor = torch.tensor(X_train, dtype=torch.float32).to(device)
   y_train_tensor = torch.tensor(y_train, dtype=torch.float32).to(device)
   X_test_tensor = torch.tensor(X_test, dtype=torch.float32).to(device)
   y_test_tensor = torch.tensor(y_test, dtype=torch.float32).to(device)
@@ -93,8 +86,7 @@ def data_processor(data):
   train_dataset = TensorDataset(X_train_tensor, y_train_tensor)
   test_dataset = TensorDataset(X_test_tensor, y_test_tensor)
 
-  # Create a DataLoader for training data
-  batch_size = 64  # Adjust the batch size as needed
+  batch_size = 64
   dataloader_train = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
   dataloader_test = DataLoader(test_dataset, batch_size=batch_size, shuffle=True)
   return dataloader_train, dataloader_test, scaler
@@ -148,10 +140,7 @@ def train_model(dataloader_train, pred_flag, symbol ,num_csvs, mode, d_input):
   chunk_mode = None
   # Creating sequences
 
-  # Creating the model
   model = Transformer(d_input, d_model, d_output, q, v, h, N, attention_size=attention_size, dropout=dropout, chunk_mode=chunk_mode, pe=pe).to(device)
-  # model = TimeSeriesTransformer(num_features, num_outputs, dim_val, n_heads, n_decoder_layers, dropout_rate).to(device)
-  # print(model)
 
   model_path = f'model_saved/{mode}_{symbol}_{N}layers.pt'
 
@@ -168,14 +157,11 @@ def train_model(dataloader_train, pred_flag, symbol ,num_csvs, mode, d_input):
 
     # Loss function and optimizer
     loss_function = nn.MSELoss()
-    # optimizer = optim.Adam(model.parameters(), lr=0.001)
     optimizer = optim.SGD(model.parameters(), lr=0.001, momentum=0.9)
 
     model.train()
-    # Prepare loss history
     for idx_epoch in range(epochs):
         running_loss = 0
-        # use fancy training percentage bar
         with tqdm(total=len(dataloader_train.dataset), desc=f"[Epoch {idx_epoch+1:3d}/{epochs}]") as pbar:
             for idx_batch, (x, y) in enumerate(dataloader_train):
                 optimizer.zero_grad()
@@ -250,23 +236,20 @@ def eval_model(data ,model, dataloader_test, symbol, mode, num_csvs, scaler):
             'R2': [r2]
         })
 
-      # Create the directory for saving plots if it doesn't exist
       os.makedirs("plot_saved", exist_ok=True)
 
       # Plotting the results
       plt.figure(figsize=(10, 6))
-      plt.plot(y_test_flattened, label="Ground Truth", color='blue')  # Assuming y_test_flattened is defined
-      plt.plot(y_pred_flattened, label="Predicted", color='red')  # Assuming y_pred_flattened is defined
+      plt.plot(y_test_flattened, label="Ground Truth", color='blue')
+      plt.plot(y_pred_flattened, label="Predicted", color='red')
       plt.title(f"{symbol} - {mode}: Ground Truth vs Predicted")
       plt.xlabel("Time Steps")
       plt.ylabel("Values")
       plt.legend()
 
-      # Save the plot as a PDF in the 'plot_saved' folder
       plt.savefig(os.path.join("plot_saved", f"{symbol}_{mode}_{num_stocks}.pdf"))
 
 
-      # 创建一个形状为 [-1, 4] 的全零数组
       if mode == 'Sentiment':
         y_test_expanded = np.zeros((y_test_flattened.shape[0], 4))
         y_pred_expanded = np.zeros((y_pred_flattened.shape[0], 4))
@@ -274,7 +257,6 @@ def eval_model(data ,model, dataloader_test, symbol, mode, num_csvs, scaler):
         y_test_expanded = np.zeros((y_test_flattened.shape[0], 3))
         y_pred_expanded = np.zeros((y_pred_flattened.shape[0], 3))
 
-      # 将原始数据放在第三列（索引为2）
       y_test_expanded[:, 2] = y_test_flattened
       y_pred_expanded[:, 2] = y_pred_flattened
 
@@ -301,8 +283,7 @@ def eval_model(data ,model, dataloader_test, symbol, mode, num_csvs, scaler):
 
 def sentiment_predict(csv_data,symbol, num_csvs, pred_flag):
   mode = 'Sentiment'
-  d_input = 4  # this one should be 4 assume it is 'Volume','Open', 'Close', 'Scaled_sentiment'
-  # Selecting relevant columns: 'Volume', 'Open', 'Close', and 'Scaled_sentiment'
+  d_input = 4
   data = csv_data[['Volume', 'Open', 'Close', 'Scaled_sentiment']].values
   dataloader_train, dataloader_test, scaler = data_processor(data)
   model = train_model(dataloader_train, pred_flag, symbol ,num_csvs, mode, d_input)
